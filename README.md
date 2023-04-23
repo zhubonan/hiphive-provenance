@@ -27,7 +27,8 @@ Provenance graph:
 ![](fcp-provenance.png)
 
 
-Example output of `datagen.py
+Example output of `run.py`:
+
 ```
 ======================================================
 Created data {'fcp': <SinglefileData: uuid: e3182b58-505b-489b-8097-6df005bc01fe (pk: 1556)>, 'opt': <Str: uuid: 68cf97d4-d751-4d4a-aea0-2707acbeaf3b (pk: 1557) value: ===================== Optimizer ======================
