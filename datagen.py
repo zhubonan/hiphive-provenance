@@ -5,18 +5,15 @@ Monte Carlo rattle approach for generating displacements.
 Runs in approximately 10 seconds on an Intel Core i5-4670K CPU.
 """
 from pathlib import Path
-from aiida import orm, load_profile
-from ase.io import write
-from ase.build import bulk
 from ase.calculators.emt import EMT
 from ase.calculators.singlepoint import SinglePointCalculator
 from hiphive.structure_generation import generate_mc_rattled_structures
-from ase.io import read
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import prepare_structures
 from trainstation import Optimizer
 
 from aiida.engine import calcfunction, workfunction
+from aiida import orm
 
 
 
@@ -27,7 +24,7 @@ def generate_mc_rattled(node, n_structures, rattled_std, minimum_distance):
     rattled_std = rattled_std.value
     minimum_distance = minimum_distance.value
     n_structures = n_structures.value
-    structures = generate_mc_rattled_structures(atoms_ideal, n_structures, rattle_std, minimum_distance)
+    structures = generate_mc_rattled_structures(atoms_ideal, n_structures, rattled_std, minimum_distance)
     out = {f"structure_{i:05d}": orm.StructureData(ase=atoms) for i, atoms in enumerate(structures)}
     return out
 
@@ -42,16 +39,17 @@ def run_emt(node):
     return array
 
 @calcfunction
-def fit_hiphive(atoms_ideal, **kwargs):
+def fit_hiphive(prim, atoms_ideal, **kwargs):
     """Perform fitting with hiphive"""
     print(kwargs)
-    # set up cluster space
+    # set up cluster space - these are hard-coded here for simplicity
     cutoffs = [5.0, 4.0, 4.0]
+    prim = prim.get_ase()
     cs = ClusterSpace(prim, cutoffs)
     print(cs)
     cs.print_orbits()
 
-    # ... and structure container
+    # Deserialize the stored data
     struct_labels = {int(s.split('_')[1]):s for s in kwargs if 'structure_' in s}
     force_labels = {int(s.split('_')[1]):s for s in kwargs if 'forces_' in s}
     rattled_structures = []
@@ -63,6 +61,7 @@ def fit_hiphive(atoms_ideal, **kwargs):
 
     atoms_ideal = atoms_ideal.get_ase()
 
+    # ... and structure container
     structures = prepare_structures(rattled_structures, atoms_ideal)
     sc = StructureContainer(cs)
     for structure in structures:
@@ -82,34 +81,26 @@ def fit_hiphive(atoms_ideal, **kwargs):
     opt_summary = orm.Str(opt.__str__())
     return {'fcp': fcp_node, 'opt': opt_summary}
 
-if __name__ == "__main__":
-
-    load_profile()
-    #
-    # parameters
+@workfunction
+def run_example(prim_node):
+    """Run a hiphive fitting example"""
+    # parameters - hardcoded here for simplicity
+    cell_size = 4
     n_structures = 5
     cell_size = 4
     rattle_std = 0.03
     minimum_distance = 2.3
 
-    # setup
-    prim = bulk('Ni', cubic=True)
-    atoms_ideal = orm.StructureData(ase=prim.repeat(cell_size))
-    # Wrapping in a workfunction is not necessary, but helps to organize the data 
-    @workfunction
-    def run_example(atoms_ideal):
-        """Run a hiphive fitting example"""
-        rattled = generate_mc_rattled(atoms_ideal, orm.Int(n_structures), orm.Float(rattle_std), orm.Float(minimum_distance))
+    ideal_node = orm.StructureData(ase=prim_node.get_ase().repeat(cell_size))
+    rattled = generate_mc_rattled(ideal_node, orm.Int(n_structures), orm.Float(rattle_std), orm.Float(minimum_distance))
 
-        fit_data = {}
-        for key, value in rattled.items():
-            i = int(key.split('_')[1])
-            force_node = run_emt(value)
-            fit_data[f'forces_{i:05d}'] = force_node
-            fit_data[f'structure_{i:05d}'] = value
-        
-        fit_output = fit_hiphive(atoms_ideal, **fit_data)
-        print("Created data", fit_output)
-        return fit_output
-
-    run_example(atoms_ideal)
+    fit_data = {}
+    for key, value in rattled.items():
+        i = int(key.split('_')[1])
+        force_node = run_emt(value)
+        fit_data[f'forces_{i:05d}'] = force_node
+        fit_data[f'structure_{i:05d}'] = value
+    
+    fit_output = fit_hiphive(prim_node, ideal_node, **fit_data)
+    print("Created data", fit_output)
+    return fit_output
