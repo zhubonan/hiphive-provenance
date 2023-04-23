@@ -25,3 +25,27 @@ The `load-fcp.py` can run by any `aiida-core>=2.0` installation; there is no nee
 
 Provenance graph:
 ![](fcp-provenance.png)
+
+
+Example output of `datagen.py
+```
+======================================================
+Created data {'fcp': <SinglefileData: uuid: e3182b58-505b-489b-8097-6df005bc01fe (pk: 1556)>, 'opt': <Str: uuid: 68cf97d4-d751-4d4a-aea0-2707acbeaf3b (pk: 1557) value: ===================== Optimizer ======================
+seed                           : 42
+fit_method                     : least-squares
+standardize                    : True
+n_target_values                : 3840
+n_parameters                   : 119
+n_nonzero_parameters           : 119
+parameters_norm                : 0.9275019
+target_values_std              : 1.027693
+rmse_train                     : 0.01667685
+rmse_test                      : 0.01975875
+R2_train                       : 0.9997333
+R2_test                        : 0.9996649
+AIC                            : -28057.89
+BIC                            : -27326.29
+train_size                     : 3456
+test_size                      : 384
+======================================================>}
+```
