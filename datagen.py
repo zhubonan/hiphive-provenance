@@ -16,7 +16,7 @@ from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import prepare_structures
 from trainstation import Optimizer
 
-from aiida.engine import calcfunction
+from aiida.engine import calcfunction, workfunction
 
 
 
@@ -95,15 +95,21 @@ if __name__ == "__main__":
     # setup
     prim = bulk('Ni', cubic=True)
     atoms_ideal = orm.StructureData(ase=prim.repeat(cell_size))
+    # Wrapping in a workfunction is not necessary, but helps to organize the data 
+    @workfunction
+    def run_example(atoms_ideal):
+        """Run a hiphive fitting example"""
+        rattled = generate_mc_rattled(atoms_ideal, orm.Int(n_structures), orm.Float(rattle_std), orm.Float(minimum_distance))
 
-    rattled = generate_mc_rattled(atoms_ideal, orm.Int(n_structures), orm.Float(rattle_std), orm.Float(minimum_distance))
+        fit_data = {}
+        for key, value in rattled.items():
+            i = int(key.split('_')[1])
+            force_node = run_emt(value)
+            fit_data[f'forces_{i:05d}'] = force_node
+            fit_data[f'structure_{i:05d}'] = value
+        
+        fit_output = fit_hiphive(atoms_ideal, **fit_data)
+        print("Created data", fit_output)
+        return fit_output
 
-    fit_data = {}
-    for key, value in rattled.items():
-        i = int(key.split('_')[1])
-        force_node = run_emt(value)
-        fit_data[f'forces_{i:05d}'] = force_node
-        fit_data[f'structure_{i:05d}'] = value
-    
-    fit_output = fit_hiphive(atoms_ideal, **fit_data)
-    print("Created data", fit_output)
+    run_example(atoms_ideal)
