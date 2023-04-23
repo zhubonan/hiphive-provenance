@@ -1,3 +1,7 @@
+"""
+Run the fitting
+"""
+
 from aiida import orm, load_profile
 from ase.build import bulk
 from datagen import run_example

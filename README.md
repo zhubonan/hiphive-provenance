@@ -22,6 +22,7 @@ where `<uuid1>` and `<uuid2>` are the UUIDs of the two nodes printed at the end 
 Note that running `datagen.py` can be done with a temporary in-memory profile without a fully working AiiDA installation. However, at the moment, it is not possible to export data into an archive from such an in-memory profile.
 
 The `load-fcp.py` can run by any `aiida-core>=2.0` installation; there is no need to install any non-Python dependencies.
+This script loads the archive `hiphive-example.aiida` and produce the provenance graph and save the force constant data included in the aiida to the disk.
 
 Provenance graph:
 ![](fcp-provenance.png)
